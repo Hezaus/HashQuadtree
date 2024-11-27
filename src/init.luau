@@ -1,3 +1,6 @@
+-- ORIGINALLY MADE BY omrezkeypie
+-- Source: https://github.com/omrezkeypie/HashOctree/tree/main
+
 --!optimize 2
 --!native
 
