@@ -17,12 +17,12 @@ export type HashQuadtree = {
 
 type Module = {
 	new: (Size: number, MaxDepth: number?, OffsetPosition: Vector3?) -> HashQuadtree,
-	InsertObjects: (HashOctree: HashQuadtree, Objects: { Object }) -> (),
-	QueryRect: (HashOctree: HashQuadtree, Position: Vector3, Size: Vector3) -> { Object },
-	QueryCircle: (HashOctree: HashQuadtree, Position: Vector3, Radius: number) -> { Object },
-	RemoveObject: (HashOctree: HashQuadtree, Object: Object) -> (),
-	InsertObject: (HashOctree: HashQuadtree, Object: Object) -> (),
-	VisualizeQuadtree: (HashOctree: HashQuadtree) -> (),
+	InsertObjects: (HashQuadtree: HashQuadtree, Objects: { Object }) -> (),
+	QueryRect: (HashQuadtree: HashQuadtree, Position: Vector3, Size: Vector3) -> { Object },
+	QueryCircle: (HashQuadtree: HashQuadtree, Position: Vector3, Radius: number) -> { Object },
+	RemoveObject: (HashQuadtree: HashQuadtree, Object: Object) -> (),
+	InsertObject: (HashQuadtree: HashQuadtree, Object: Object) -> (),
+	VisualizeQuadtree: (HashQuadtree: HashQuadtree) -> (),
 }
 
 local SuffixToOrder = {
@@ -35,7 +35,7 @@ local SuffixToOrder = {
 local Dot = Vector3.new().Dot
 local SubdivideThreshold = 30
 
-local HashOctreeModule: Module = {} :: Module
+local HashQuadtreeModule: Module = {} :: Module
 
 local function IsPositionInBox(Position: Vector3, MinBounds: Vector3, MaxBounds: Vector3): boolean
 	return Position.X >= MinBounds.X
@@ -77,11 +77,11 @@ local function DetectRectAndCircleOverlap(
 	return Distance <= RadiusSquared
 end
 
-local function Subdivide(HashOctree: HashQuadtree, Node: number)
+local function Subdivide(HashQuadtree: HashQuadtree, Node: number)
 	local ShiftedNode = Node * 4
 
 	for i = 0, 3 do
-		HashOctree.Nodes[ShiftedNode + i] = {}
+		HashQuadtree.Nodes[ShiftedNode + i] = {}
 	end
 end
 
@@ -103,10 +103,10 @@ local function GetNodePositionAndSize(HashQuadtree: HashQuadtree, Node: number):
 	return HashQuadtree.OffsetPosition + Position, HalfSize * 2
 end
 
-local function ReassignObjects(HashOctree: HashQuadtree, Node: number, NodePosition: Vector3)
-	Subdivide(HashOctree, Node)
+local function ReassignObjects(HashQuadtree: HashQuadtree, Node: number, NodePosition: Vector3)
+	Subdivide(HashQuadtree, Node)
 
-	local NodeTable = HashOctree.Nodes[Node]
+	local NodeTable = HashQuadtree.Nodes[Node]
 	local ShiftedNode = Node * 4
 
 	for i = 1, #NodeTable do
@@ -122,30 +122,30 @@ local function ReassignObjects(HashOctree: HashQuadtree, Node: number, NodePosit
 			Suffix += 1
 		end
 
-		table.insert(HashOctree.Nodes[ShiftedNode + Suffix], Object)
+		table.insert(HashQuadtree.Nodes[ShiftedNode + Suffix], Object)
 	end
 
 	table.clear(NodeTable)
 end
 
-function HashOctreeModule.new(Size: number, MaxDepth: number?, OffsetPosition: Vector3?): HashQuadtree
-	local newHashOctree = {
+function HashQuadtreeModule.new(Size: number, MaxDepth: number?, OffsetPosition: Vector3?): HashQuadtree
+	local newHashQuadtree = {
 		MaxDepth = if MaxDepth then math.clamp(MaxDepth, 1, 10) else 5,
 		Size = Size,
 		OffsetPosition = if OffsetPosition then OffsetPosition else Vector3.zero,
 		Nodes = { {} },
 	}
 
-	return newHashOctree
+	return newHashQuadtree
 end
 
-function HashOctreeModule.InsertObjects(HashOctree: HashQuadtree, Objects: { Object })
-	local QuarterSize = HashOctree.Size / 4
+function HashQuadtreeModule.InsertObjects(HashQuadtree: HashQuadtree, Objects: { Object })
+	local QuarterSize = HashQuadtree.Size / 4
 	local Size = QuarterSize
 	local Depth = 0
-	local NodePosition = HashOctree.OffsetPosition
+	local NodePosition = HashQuadtree.OffsetPosition
 	local ChosenNode = 1
-	local MaxDepth = HashOctree.MaxDepth
+	local MaxDepth = HashQuadtree.MaxDepth
 
 	for _, Object in Objects do
 		local Position = Object.Position
@@ -163,13 +163,13 @@ function HashOctreeModule.InsertObjects(HashOctree: HashQuadtree, Objects: { Obj
 
 			local NextNode = ChosenNode * 4 + Suffix
 
-			if HashOctree.Nodes[NextNode] == nil then
-				local ChosenNodeTable = HashOctree.Nodes[ChosenNode]
+			if HashQuadtree.Nodes[NextNode] == nil then
+				local ChosenNodeTable = HashQuadtree.Nodes[ChosenNode]
 
 				table.insert(ChosenNodeTable, Object)
 
 				if #ChosenNodeTable > SubdivideThreshold and Depth < MaxDepth then
-					ReassignObjects(HashOctree, ChosenNode, NodePosition)
+					ReassignObjects(HashQuadtree, ChosenNode, NodePosition)
 				end
 
 				break
@@ -184,17 +184,17 @@ function HashOctreeModule.InsertObjects(HashOctree: HashQuadtree, Objects: { Obj
 
 		Size = QuarterSize
 		Depth = 0
-		NodePosition = HashOctree.OffsetPosition
+		NodePosition = HashQuadtree.OffsetPosition
 		ChosenNode = 1
 	end
 end
 
-function HashOctreeModule.InsertObject(HashOctree: HashQuadtree, Object: Object)
-	local Size = HashOctree.Size / 4
+function HashQuadtreeModule.InsertObject(HashQuadtree: HashQuadtree, Object: Object)
+	local Size = HashQuadtree.Size / 4
 	local Depth = 0
-	local NodePosition = HashOctree.OffsetPosition
+	local NodePosition = HashQuadtree.OffsetPosition
 	local ChosenNode = 1
-	local MaxDepth = HashOctree.MaxDepth
+	local MaxDepth = HashQuadtree.MaxDepth
 	local Position = Object.Position
 
 	while true do
@@ -210,13 +210,13 @@ function HashOctreeModule.InsertObject(HashOctree: HashQuadtree, Object: Object)
 
 		local NextNode = ChosenNode * 4 + Suffix
 
-		if HashOctree.Nodes[NextNode] == nil then
-			local ChosenNodeTable = HashOctree.Nodes[ChosenNode]
+		if HashQuadtree.Nodes[NextNode] == nil then
+			local ChosenNodeTable = HashQuadtree.Nodes[ChosenNode]
 
 			table.insert(ChosenNodeTable, Object)
 
 			if #ChosenNodeTable > SubdivideThreshold and Depth < MaxDepth then
-				ReassignObjects(HashOctree, ChosenNode, NodePosition)
+				ReassignObjects(HashQuadtree, ChosenNode, NodePosition)
 			end
 
 			break
@@ -230,10 +230,10 @@ function HashOctreeModule.InsertObject(HashOctree: HashQuadtree, Object: Object)
 	end
 end
 
-function HashOctreeModule.RemoveObject(HashOctree: HashQuadtree, Object: Object)
-	local Size = HashOctree.Size / 4
+function HashQuadtreeModule.RemoveObject(HashQuadtree: HashQuadtree, Object: Object)
+	local Size = HashQuadtree.Size / 4
 	local ChosenNode = 1
-	local NodePosition = HashOctree.OffsetPosition
+	local NodePosition = HashQuadtree.OffsetPosition
 	local Position = Object.Position
 
 	while true do
@@ -249,8 +249,8 @@ function HashOctreeModule.RemoveObject(HashOctree: HashQuadtree, Object: Object)
 
 		local NextNode = ChosenNode * 4 + Suffix
 
-		if HashOctree.Nodes[NextNode] == nil then
-			local LeafNode = HashOctree.Nodes[ChosenNode]
+		if HashQuadtree.Nodes[NextNode] == nil then
+			local LeafNode = HashQuadtree.Nodes[ChosenNode]
 			table.remove(LeafNode, table.find(LeafNode, Object))
 
 			break
@@ -262,17 +262,17 @@ function HashOctreeModule.RemoveObject(HashOctree: HashQuadtree, Object: Object)
 	end
 end
 
-function HashOctreeModule.QueryRect(HashOctree: HashQuadtree, Position: Vector3, Size: Vector3): { Object }
+function HashQuadtreeModule.QueryRect(HashQuadtree: HashQuadtree, Position: Vector3, Size: Vector3): { Object }
 	local MinBound = Position - (Size / 2)
 	local MaxBound = Position + (Size / 2)
 	local ChosenNodes = { 1 }
-	local Nodes = HashOctree.Nodes
+	local Nodes = HashQuadtree.Nodes
 	local GottenObjects = {}
 
 	while #ChosenNodes > 0 do
 		local Node = table.remove(ChosenNodes)
 		local NodeTable = Nodes[Node]
-		local NodePosition, NodeSize = GetNodePositionAndSize(HashOctree, Node)
+		local NodePosition, NodeSize = GetNodePositionAndSize(HashQuadtree, Node)
 		if not DetectBoxOverlap(MinBound, MaxBound, NodePosition - NodeSize, NodePosition + NodeSize) then
 			continue
 		end
@@ -303,16 +303,16 @@ function HashOctreeModule.QueryRect(HashOctree: HashQuadtree, Position: Vector3,
 	return GottenObjects
 end
 
-function HashOctreeModule.QueryCircle(HashOctree: HashQuadtree, Position: Vector3, Radius: number): { Object }
+function HashQuadtreeModule.QueryCircle(HashQuadtree: HashQuadtree, Position: Vector3, Radius: number): { Object }
 	local ChosenNodes = { 1 }
-	local Nodes = HashOctree.Nodes
+	local Nodes = HashQuadtree.Nodes
 	local GottenObjects = {}
 	Radius *= Radius
 
 	while #ChosenNodes > 0 do
 		local Node = table.remove(ChosenNodes)
 		local NodeTable = Nodes[Node]
-		local NodePosition, NodeSize = GetNodePositionAndSize(HashOctree, Node)
+		local NodePosition, NodeSize = GetNodePositionAndSize(HashQuadtree, Node)
 
 		if not DetectRectAndCircleOverlap(NodePosition - NodeSize, NodePosition + NodeSize, Position, Radius) then
 			continue
@@ -360,19 +360,19 @@ local function MakeVisualisePart(Size, MaxBound, Suffix)
 	SelectionBox.Adornee = VisualizePart
 end
 
-function HashOctreeModule.VisualizeQuadtree(HashOctree: HashQuadtree)
-	local UnvisualisedNodes = { { 1, Size = HashOctree.Size } }
+function HashQuadtreeModule.VisualizeQuadtree(HashQuadtree: HashQuadtree)
+	local UnvisualisedNodes = { { 1, Size = HashQuadtree.Size } }
 
 	while #UnvisualisedNodes > 0 do
 		local Node = table.remove(UnvisualisedNodes)
-		local NodePosition = GetNodePositionAndSize(HashOctree, Node[1])
+		local NodePosition = GetNodePositionAndSize(HashQuadtree, Node[1])
 
 		MakeVisualisePart(Node.Size, NodePosition, Node[1])
 
 		for i = 0, 7 do
 			local HashIndex = Node[1] * 8 + i
 
-			if HashOctree.Nodes[HashIndex] == nil then
+			if HashQuadtree.Nodes[HashIndex] == nil then
 				continue
 			end
 
@@ -381,4 +381,4 @@ function HashOctreeModule.VisualizeQuadtree(HashOctree: HashQuadtree)
 	end
 end
 
-return HashOctreeModule
+return HashQuadtreeModule
